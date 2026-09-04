@@ -1,0 +1,21 @@
+{
+  "name": "claude-status",
+  "owner": {
+    "name": "Stefan Åhman",
+    "url": "https://github.com/stefanahman"
+  },
+  "metadata": {
+    "description": "Claude Code hooks for tmux-claude-status",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "claude-status",
+      "source": "./",
+      "description": "Show whether Claude Code is working, blocked, or done in your tmux status bar",
+      "version": "0.1.0",
+      "license": "MIT",
+      "keywords": ["tmux", "status-bar", "hooks"]
+    }
+  ]
+}
