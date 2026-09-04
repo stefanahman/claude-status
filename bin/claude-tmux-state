@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# Write the Claude Code state of the current tmux window.
+#
+# Usage: claude-tmux-state working|blocked|done|clear
+#
+# Called from Claude Code hooks (hooks/hooks.json):
+#   UserPromptSubmit, PostToolUse                 → working
+#   PreToolUse (AskUserQuestion, ExitPlanMode)    → blocked
+#   PermissionRequest, Elicitation, Notification  → blocked
+#   Stop, StopFailure                             → done
+#   SessionEnd                                    → clear
+#
+# The state lives in a WINDOW option (default @claude-state) so the
+# status-bar renderer (claude-tmux-summary) can aggregate it across every
+# window on the server:
+#   working  processing a turn
+#   blocked  waiting for you (permission, question, plan approval)
+#   done     finished, result not looked at yet
+#   idle     finished and seen — written by claude-tmux-ack, never by hooks
+#   ""       no Claude activity in this window (cleared on exit)
+#
+# Auto-ack: if you're already looking at the pane when Claude finishes,
+# skip the unread phase and write `idle` directly. "Looking at it" means a
+# client is attached to the session AND the pane is active in its window
+# AND the window is active in the session. False positive: attached but
+# alt-tabbed away — you miss the unread signal once, and client-focus-in
+# would have acked on your return anyway.
+#
+# No-op outside tmux.
+set -euo pipefail
+
+state="${1-}"
+case "$state" in
+    working|blocked|done) ;;
+    clear) state="" ;;
+    *)
+        echo "usage: claude-tmux-state working|blocked|done|clear" >&2
+        exit 64
+        ;;
+esac
+
+[[ -n "${TMUX:-}" ]] || exit 0
+[[ -n "${TMUX_PANE:-}" ]] || exit 0
+
+option=$(tmux show-option -gqv @claude-status-option 2>/dev/null || true)
+option="${option:-@claude-state}"
+
+if [[ "$state" == "done" ]]; then
+    info=$(tmux display-message -t "$TMUX_PANE" -p '#{pane_active} #{window_active} #{session_attached}' 2>/dev/null || true)
+    read -r pane_active window_active session_attached <<<"$info"
+    if [[ "${pane_active:-}" == "1" && "${window_active:-}" == "1" && "${session_attached:-0}" != "0" ]]; then
+        state="idle"
+    fi
+fi
+
+tmux set-option -w -t "$TMUX_PANE" "$option" "$state"

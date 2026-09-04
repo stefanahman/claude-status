@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# Acknowledge a finished Claude window: done → idle.
+# No-op unless the window's state is exactly `done`, so acking a working
+# or blocked window (or one without Claude) changes nothing.
+#
+# Usage:
+#   claude-tmux-ack              current pane via $TMUX_PANE (prefix + a)
+#   claude-tmux-ack <pane-id>    specific pane — the focus hooks pass
+#                                #{pane_id} / #{client_active_pane} because
+#                                $TMUX_PANE isn't reliable in hook context
+set -euo pipefail
+
+target="${1-}"
+if [[ -z "$target" ]]; then
+    [[ -n "${TMUX:-}" ]] || exit 0
+    [[ -n "${TMUX_PANE:-}" ]] || exit 0
+    target="$TMUX_PANE"
+fi
+
+option=$(tmux show-option -gqv @claude-status-option 2>/dev/null || true)
+option="${option:-@claude-state}"
+
+state=$(tmux show-option -w -t "$target" -qv "$option" 2>/dev/null || true)
+[[ "$state" == "done" ]] || exit 0
+tmux set-option -w -t "$target" "$option" idle

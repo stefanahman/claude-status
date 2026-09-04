@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+# Render one line summarising the Claude state of every window on the tmux
+# server, for status-left/right. claude-status.tmux wires it in wherever
+# you wrote #{claude_status}.
+#
+# One chip per session that has a stateful window, coloured by that
+# window's state, with a `*` suffix while done-but-unread:
+#
+#     work*  eden  notes
+#
+# With @claude-status-aggregate "<session>:<label>", the windows of that
+# session collapse into one chip counting each state — for a session that
+# holds many agents, e.g. one window per PR review:
+#
+#     pr(1⚠ 2~ 1* 3)      ⚠ blocked   ~ working   * done   plain = idle
+#
+# Runs as a tmux #() job: tmux sets $TMUX to its own socket, but there is
+# no login shell and bash is whatever tmux's PATH finds first (3.2 on
+# stock macOS) — so no associative arrays.
+set -euo pipefail
+
+get_option() {
+    local value
+    value=$(tmux show-option -gqv "$1" 2>/dev/null || true)
+    printf '%s' "${value:-$2}"
+}
+
+option=$(get_option '@claude-status-option' '@claude-state')
+color_working=$(get_option '@claude-status-color-working' '#dbbc7f')
+color_blocked=$(get_option '@claude-status-color-blocked' '#ffaa00')
+color_done=$(get_option '@claude-status-color-done' '#00cc66')
+aggregate=$(get_option '@claude-status-aggregate' '')
+agg_session="${aggregate%%:*}"
+agg_label="${aggregate#*:}"
+
+color_for() {
+    case "$1" in
+        blocked) printf '%s' "$color_blocked" ;;
+        working) printf '%s' "$color_working" ;;
+        done | idle) printf '%s' "$color_done" ;;
+        *) printf 'default' ;;
+    esac
+}
+
+out=""
+seen=" "
+agg_blocked=0 agg_working=0 agg_done=0 agg_idle=0
+tab=$'\t'
+
+while IFS="$tab" read -r session _ state; do
+    [[ -n "$state" ]] || continue
+
+    if [[ -n "$agg_session" && "$session" == "$agg_session" ]]; then
+        case "$state" in
+            blocked) agg_blocked=$((agg_blocked + 1)) ;;
+            working) agg_working=$((agg_working + 1)) ;;
+            done) agg_done=$((agg_done + 1)) ;;
+            idle) agg_idle=$((agg_idle + 1)) ;;
+        esac
+        continue
+    fi
+
+    # One chip per session: the first stateful window wins.
+    [[ "$seen" == *" $session "* ]] && continue
+    seen+="$session "
+
+    suffix=""
+    [[ "$state" == "done" ]] && suffix="*"
+    out+=" #[fg=$(color_for "$state")]${session}${suffix}#[default]"
+done < <(tmux list-windows -a -F "#{session_name}${tab}#{window_name}${tab}#{${option}}" 2>/dev/null || true)
+
+if ((agg_blocked + agg_working + agg_done + agg_idle > 0)); then
+    inner=""
+    ((agg_blocked > 0)) && inner+=" #[fg=$color_blocked]${agg_blocked}⚠#[default]"
+    ((agg_working > 0)) && inner+=" #[fg=$color_working]${agg_working}~#[default]"
+    ((agg_done > 0)) && inner+=" #[fg=$color_done]${agg_done}*#[default]"
+    ((agg_idle > 0)) && inner+=" #[fg=$color_done]${agg_idle}#[default]"
+    out+=" #[fg=default]${agg_label}(${inner# })#[default]"
+fi
+
+printf '%s' "$out"
