@@ -1,0 +1,16 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends tmux shellcheck
+      - run: shellcheck claude-status.tmux bin/* test/smoke.sh
+      - run: test/smoke.sh
+      - run: test -x claude-status.tmux && for f in bin/*; do test -x "$f"; done
