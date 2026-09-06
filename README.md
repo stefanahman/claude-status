@@ -189,8 +189,9 @@ claude --plugin-dir . -p 'Reply with ok'   # inside tmux: watch the window optio
 ```
 
 Developing against a checkout: `ln -sfn "$PWD" ~/.tmux/plugins/tmux-claude-status`
-(TPM treats an existing directory as installed) and
-`claude --plugin-dir /path/to/tmux-claude-status`.
+(`~/.config/tmux/plugins/` when your tmux.conf lives under `~/.config/tmux` —
+TPM installs next to the config; it treats an existing directory as installed)
+and `claude --plugin-dir /path/to/tmux-claude-status`.
 
 ## License
 
