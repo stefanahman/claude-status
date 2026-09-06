@@ -14,22 +14,31 @@
 #
 #     pr(1⚠ 2~ 1* 3)      ⚠ blocked   ~ working   * done   plain = idle
 #
-# Runs as a tmux #() job: tmux sets $TMUX to its own socket, but there is
-# no login shell and bash is whatever tmux's PATH finds first (3.2 on
-# stock macOS) — so no associative arrays.
+# Runs as a tmux #() job every status-interval: tmux sets $TMUX to its
+# own socket, but there is no login shell and bash is whatever tmux's
+# PATH finds first (3.2 on stock macOS) — so no associative arrays. Two
+# tmux round-trips per run: one for the options, one for the windows.
 set -euo pipefail
 
-get_option() {
-    local value
-    value=$(tmux show-option -gqv "$1" 2>/dev/null || true)
-    printf '%s' "${value:-$2}"
-}
+option='@claude-state'
+color_working='#dbbc7f'
+color_blocked='#ffaa00'
+color_done='#00cc66'
+aggregate=''
 
-option=$(get_option '@claude-status-option' '@claude-state')
-color_working=$(get_option '@claude-status-color-working' '#dbbc7f')
-color_blocked=$(get_option '@claude-status-color-blocked' '#ffaa00')
-color_done=$(get_option '@claude-status-color-done' '#00cc66')
-aggregate=$(get_option '@claude-status-aggregate' '')
+# `show-options -g` prints `name value`, quoting values that need it.
+while read -r name value; do
+    value="${value#\"}"
+    value="${value%\"}"
+    case "$name" in
+        @claude-status-option) option="$value" ;;
+        @claude-status-color-working) color_working="$value" ;;
+        @claude-status-color-blocked) color_blocked="$value" ;;
+        @claude-status-color-done) color_done="$value" ;;
+        @claude-status-aggregate) aggregate="$value" ;;
+    esac
+done < <(tmux show-options -g 2>/dev/null | grep '^@claude-status-' || true)
+
 agg_session="${aggregate%%:*}"
 agg_label="${aggregate#*:}"
 

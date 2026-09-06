@@ -1,6 +1,19 @@
 {
-  "description": "Writes Claude's state (working / blocked / done) to the tmux window option that tmux-claude-status renders in the status bar. No-op outside tmux.",
+  "description": "Writes Claude's state (idle / working / blocked / done) to the tmux window option that tmux-claude-status renders in the status bar. No-op outside tmux.",
   "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|fork",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/claude-tmux-state",
+            "args": ["idle"],
+            "timeout": 5
+          }
+        ]
+      }
+    ],
     "UserPromptSubmit": [
       {
         "hooks": [

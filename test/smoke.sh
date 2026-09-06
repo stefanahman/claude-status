@@ -6,8 +6,8 @@
 #   test/smoke.sh                       # scripts run under `bash` from PATH
 #   BASH_BIN=/bin/bash test/smoke.sh    # macOS: prove they run on stock bash 3.2
 #
-# Not covered: the auto-ack branch in claude-tmux-state (needs an attached
-# client, i.e. a tty) and the Claude side (hooks/hooks.json), which
+# Not covered: the auto-ack branch in claude-tmux-state (needs an attached,
+# focused client, i.e. a tty) and the Claude side (hooks/hooks.json), which
 # `claude plugin validate .` checks structurally.
 set -euo pipefail
 
@@ -98,6 +98,10 @@ assert_contains "$(summary)" 'pr(#[fg=#ffaa00]1⚠#[default] #[fg=#00cc66]1#[def
 
 state work:main "done"
 assert_contains "$(summary)" '#[fg=#00cc66]work*#[default]' "done chip carries *"
+state work:main idle
+assert_eq "$(opt work:main)" idle "idle written directly (SessionStart)"
+assert_contains "$(summary)" '#[fg=#00cc66]work#[default]' "idle chip has no *"
+state work:main "done"
 
 # --- tmux job context (what #() and the focus hooks actually run in) ---------
 # Output goes through a file: older tmux doesn't relay run-shell output to a

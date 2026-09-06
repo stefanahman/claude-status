@@ -62,11 +62,11 @@ permissions. Outside tmux they exit immediately.
 | `working` | yellow | processing a turn | hooks |
 | `blocked` | orange | waiting for you: permission, question, plan approval | hooks |
 | `done` | green, `*` suffix | finished, you haven't looked yet | hooks |
-| `idle` | green | finished and seen | ack (`prefix + a`, or focusing the window) |
+| `idle` | green | waiting for your next prompt: just started, or finished and seen | hooks (session start), ack (`prefix + a`, or focusing the window) |
 | *(unset)* | — | no Claude here / session ended | hooks |
 
-If you're already looking at the pane when Claude finishes, it goes straight
-to `idle` — no stale `*`.
+If you're looking at the pane when Claude finishes — pane and window active,
+and the terminal has focus — it goes straight to `idle`: no stale `*`.
 
 ### The contract (for other tools)
 
@@ -110,6 +110,7 @@ renders `pr(1⚠ 2~ 1* 3)`: 1 blocked, 2 working, 1 done-unread, 3 idle.
 
 | event | state |
 |---|---|
+| `SessionStart` (`startup`, `resume`, `clear`, `fork`) | `idle` |
 | `UserPromptSubmit`, `PostToolUse` | `working` |
 | `PreToolUse` for `AskUserQuestion` / `ExitPlanMode` | `blocked` |
 | `PermissionRequest`, `Elicitation` | `blocked` |
@@ -136,6 +137,7 @@ If you'd rather not use the plugin system, the same hooks go into
 ```json
 {
   "hooks": {
+    "SessionStart":      [{ "matcher": "startup|resume|clear|fork", "hooks": [{ "type": "command", "command": "~/.tmux/plugins/tmux-claude-status/bin/claude-tmux-state idle" }] }],
     "UserPromptSubmit":  [{ "hooks": [{ "type": "command", "command": "~/.tmux/plugins/tmux-claude-status/bin/claude-tmux-state working" }] }],
     "PostToolUse":       [{ "hooks": [{ "type": "command", "command": "~/.tmux/plugins/tmux-claude-status/bin/claude-tmux-state working" }] }],
     "PreToolUse":        [{ "matcher": "AskUserQuestion|ExitPlanMode", "hooks": [{ "type": "command", "command": "~/.tmux/plugins/tmux-claude-status/bin/claude-tmux-state blocked" }] }],
@@ -153,10 +155,9 @@ If you'd rather not use the plugin system, the same hooks go into
 
 - One state per window. Two Claude sessions in split panes of the same window
   overwrite each other; put them in separate windows.
-- "Already looking at it" means *a client is attached, the pane is active, the
-  window is active*. If you're attached but alt-tabbed away when Claude
-  finishes, that one `done` is acked immediately — you see the window when you
-  come back anyway.
+- "Already looking at it" reads the terminal's focus from tmux ≥ 3.3
+  (`client_flags`). On older servers it means *attached, pane active, window
+  active*, so a finish while you're alt-tabbed away is acked as seen.
 - Requires bash (any version — stock macOS 3.2 is fine) on tmux's `PATH`.
 
 ## Related
@@ -180,7 +181,7 @@ few lines in `bin/claude-tmux-state` — not built yet.
 ## Hacking
 
 ```sh
-test/smoke.sh                       # throwaway tmux server, 21 checks
+test/smoke.sh                       # throwaway tmux server, 23 checks
 BASH_BIN=/bin/bash test/smoke.sh    # macOS: prove it on bash 3.2
 shellcheck claude-status.tmux bin/* test/smoke.sh
 claude plugin validate .

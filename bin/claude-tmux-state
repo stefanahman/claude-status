@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Write the Claude Code state of the current tmux window.
 #
-# Usage: claude-tmux-state working|blocked|done|clear
+# Usage: claude-tmux-state working|blocked|done|idle|clear
 #
 # Called from Claude Code hooks (hooks/hooks.json):
+#   SessionStart (startup, resume, clear, fork)   → idle
 #   UserPromptSubmit, PostToolUse                 → working
 #   PreToolUse (AskUserQuestion, ExitPlanMode)    → blocked
 #   PermissionRequest, Elicitation, Notification  → blocked
@@ -16,25 +17,26 @@
 #   working  processing a turn
 #   blocked  waiting for you (permission, question, plan approval)
 #   done     finished, result not looked at yet
-#   idle     finished and seen — written by claude-tmux-ack, never by hooks
-#   ""       no Claude activity in this window (cleared on exit)
+#   idle     waiting for your next prompt: just started, or finished and seen
+#   ""       no Claude in this window (cleared on exit)
 #
 # Auto-ack: if you're already looking at the pane when Claude finishes,
-# skip the unread phase and write `idle` directly. "Looking at it" means a
-# client is attached to the session AND the pane is active in its window
-# AND the window is active in the session. False positive: attached but
-# alt-tabbed away — you miss the unread signal once, and client-focus-in
-# would have acked on your return anyway.
+# skip the unread phase and write `idle` directly. "Looking at it" means
+# the pane is active in its window, the window is active in its session,
+# and a client attached to that session has the terminal's focus
+# (client_flags `focused`, tmux ≥ 3.3; older servers count any attached
+# client and may ack a finish you didn't see).
 #
-# No-op outside tmux.
+# Prints nothing: SessionStart hook output would be fed to Claude as
+# context. No-op outside tmux.
 set -euo pipefail
 
 state="${1-}"
 case "$state" in
-    working|blocked|done) ;;
+    working|blocked|done|idle) ;;
     clear) state="" ;;
     *)
-        echo "usage: claude-tmux-state working|blocked|done|clear" >&2
+        echo "usage: claude-tmux-state working|blocked|done|idle|clear" >&2
         exit 64
         ;;
 esac
@@ -45,12 +47,22 @@ esac
 option=$(tmux show-option -gqv @claude-status-option 2>/dev/null || true)
 option="${option:-@claude-state}"
 
-if [[ "$state" == "done" ]]; then
-    info=$(tmux display-message -t "$TMUX_PANE" -p '#{pane_active} #{window_active} #{session_attached}' 2>/dev/null || true)
-    read -r pane_active window_active session_attached <<<"$info"
-    if [[ "${pane_active:-}" == "1" && "${window_active:-}" == "1" && "${session_attached:-0}" != "0" ]]; then
-        state="idle"
+# looking_at reports whether the user can see the pane right now.
+looking_at() {
+    local info pane_active window_active session_attached session_id
+    info=$(tmux display-message -t "$TMUX_PANE" -p '#{pane_active} #{window_active} #{session_attached} #{session_id}' 2>/dev/null || true)
+    read -r pane_active window_active session_attached session_id <<<"$info"
+    [[ "${pane_active:-}" == "1" && "${window_active:-}" == "1" && "${session_attached:-0}" != "0" ]] || return 1
+    # tmux ≥ 3.3 knows which client has the terminal's focus.
+    local major minor
+    IFS=. read -r major minor <<<"$(tmux -V 2>/dev/null | sed 's/^tmux //; s/[^0-9.].*$//')"
+    if ((${major:-0} > 3 || (${major:-0} == 3 && ${minor:-0} >= 3))); then
+        tmux list-clients -t "$session_id" -F '#{client_flags}' 2>/dev/null | grep -q focused
     fi
+}
+
+if [[ "$state" == "done" ]] && looking_at; then
+    state="idle"
 fi
 
 tmux set-option -w -t "$TMUX_PANE" "$option" "$state"
