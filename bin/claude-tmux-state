@@ -18,7 +18,7 @@
 #   blocked  waiting for you (permission, question, plan approval)
 #   done     finished, result not looked at yet
 #   idle     waiting for your next prompt: just started, or finished and seen
-#   ""       no Claude in this window (cleared on exit)
+#   (unset)  no Claude in this window (cleared on exit)
 #
 # Auto-ack: if you're already looking at the pane when Claude finishes,
 # skip the unread phase and write `idle` directly. "Looking at it" means
@@ -34,7 +34,7 @@ set -euo pipefail
 state="${1-}"
 case "$state" in
     working|blocked|done|idle) ;;
-    clear) state="" ;;
+    clear) ;;
     *)
         echo "usage: claude-tmux-state working|blocked|done|idle|clear" >&2
         exit 64
@@ -43,6 +43,12 @@ esac
 
 [[ -n "${TMUX:-}" ]] || exit 0
 [[ -n "${TMUX_PANE:-}" ]] || exit 0
+
+if [[ "$state" == "clear" ]]; then
+    # Unset rather than "": the window then carries no option at all.
+    tmux set-option -wu -t "$TMUX_PANE" @claude-state
+    exit 0
+fi
 
 # looking_at reports whether the user can see the pane right now.
 looking_at() {

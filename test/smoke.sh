@@ -116,6 +116,7 @@ state work:main clear
 state pr-reviews:pr-1 clear
 state pr-reviews:pr-2 clear
 assert_eq "$(summary)" "" "no stateful windows → empty output"
+assert_not_contains "$(t show-options -w -t "$(pane work:main)")" "@claude-state" "clear unsets the option"
 
 # --- options -----------------------------------------------------------------
 t set-option -g @claude-status-color-working '#ff0000'
