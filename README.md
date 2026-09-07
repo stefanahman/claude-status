@@ -25,6 +25,7 @@ Two halves, one contract. Install both.
 ```tmux
 set -g @plugin 'stefanahman/tmux-claude-status'
 set -g status-right '#{claude_status} %a %H:%M'   # put the placeholder wherever you like
+set -g status-right-length 100                    # the default 40 truncates after a few chips
 
 run '~/.tmux/plugins/tpm/tpm'
 ```
@@ -53,7 +54,8 @@ Or in `~/.claude/settings.json`:
 ```
 
 The plugin ships only hooks (`hooks/hooks.json`) — no skills, no commands, no
-permissions. Outside tmux they exit immediately.
+permissions — for the events Claude Code 2.1.263 emits (the table under *How
+it works*; tested with that release). Outside tmux they exit immediately.
 
 ## States
 
