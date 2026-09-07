@@ -6,8 +6,9 @@
 # Usage:
 #   claude-tmux-ack              current pane via $TMUX_PANE (prefix + a)
 #   claude-tmux-ack <pane-id>    specific pane — the focus hooks pass
-#                                #{pane_id} / #{client_active_pane} because
-#                                $TMUX_PANE isn't reliable in hook context
+#                                #{pane_id} (in a client hook, the client's
+#                                current pane) because $TMUX_PANE isn't
+#                                reliable in hook context
 set -euo pipefail
 
 target="${1-}"

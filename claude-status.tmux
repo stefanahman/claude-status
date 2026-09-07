@@ -32,7 +32,8 @@ tmux bind-key "$(get_option '@claude-status-ack-key' 'a')" run-shell "$ACK"
 # active pane changes inside a client (prefix+arrows, mouse, prefix+o);
 # client-focus-in fires when the terminal window itself regains focus
 # (alt-tab, a window manager focusing it). The pane id is passed explicitly
-# because $TMUX_PANE isn't reliably set in hook context. Both need
+# because $TMUX_PANE isn't reliably set in hook context; in a client hook
+# #{pane_id} is the client's current pane. Both need
 # focus-events. -a appends so the user's own hooks survive; the check keeps
 # re-sourcing idempotent (query by name — tmux 3.4's bare `show-hooks -g`
 # doesn't list pane-focus-in). client-focus-in exists from tmux 3.3; on
@@ -42,7 +43,7 @@ hook_installed() {
     tmux show-hooks -g "$1" 2>/dev/null | grep -qF "$ACK"
 }
 hook_installed pane-focus-in || tmux set-hook -ga pane-focus-in "run-shell \"$ACK #{pane_id}\""
-hook_installed client-focus-in || tmux set-hook -ga client-focus-in "run-shell \"$ACK #{client_active_pane}\"" 2>/dev/null || true
+hook_installed client-focus-in || tmux set-hook -ga client-focus-in "run-shell \"$ACK #{pane_id}\"" 2>/dev/null || true
 
 # 3. Status interpolation (the tmux-battery pattern): the literal placeholder
 # #{claude_status} becomes a #() call to the renderer.
