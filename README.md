@@ -14,7 +14,7 @@ status bar you already have.
 Claude Code hooks write the state into a tmux window option; a tiny renderer
 turns the options of all windows into coloured chips. Looking at a finished
 window (focusing the pane, or the terminal itself) acknowledges it. Nothing
-polls, nothing scrapes the screen, and it works the same over SSH.
+polls Claude, nothing scrapes the screen, and it works the same over SSH.
 
 ## Install
 
@@ -159,6 +159,10 @@ If you'd rather not use the plugin system, the same hooks go into
 - "Already looking at it" reads the terminal's focus from tmux ≥ 3.3
   (`client_flags`). On older servers it means *attached, pane active, window
   active*, so a finish while you're alt-tabbed away is acked as seen.
+- tmux marks a client `focused` on the terminal's focus-in report and clears
+  it on focus-out; a terminal window that never reports focus-out — one on
+  another desktop space; with Ghostty and yabai three of six clients were
+  `focused` at once — stays focused, so a finish there is auto-acked as seen.
 - Requires bash (any version — stock macOS 3.2 is fine) on tmux's `PATH`.
 
 ## Related
