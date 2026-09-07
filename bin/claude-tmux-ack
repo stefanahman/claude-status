@@ -17,9 +17,6 @@ if [[ -z "$target" ]]; then
     target="$TMUX_PANE"
 fi
 
-option=$(tmux show-option -gqv @claude-status-option 2>/dev/null || true)
-option="${option:-@claude-state}"
-
-state=$(tmux show-option -w -t "$target" -qv "$option" 2>/dev/null || true)
+state=$(tmux show-option -w -t "$target" -qv @claude-state 2>/dev/null || true)
 [[ "$state" == "done" ]] || exit 0
-tmux set-option -w -t "$target" "$option" idle
+tmux set-option -w -t "$target" @claude-state idle

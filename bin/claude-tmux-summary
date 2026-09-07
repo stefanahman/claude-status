@@ -20,7 +20,7 @@
 # tmux round-trips per run: one for the options, one for the windows.
 set -euo pipefail
 
-option='@claude-state'
+option='@claude-state' # the window option the hooks write: the contract other tools read too
 color_working='#dbbc7f'
 color_blocked='#ffaa00'
 color_done='#00cc66'
@@ -31,7 +31,6 @@ while read -r name value; do
     value="${value#\"}"
     value="${value%\"}"
     case "$name" in
-        @claude-status-option) option="$value" ;;
         @claude-status-color-working) color_working="$value" ;;
         @claude-status-color-blocked) color_blocked="$value" ;;
         @claude-status-color-done) color_done="$value" ;;

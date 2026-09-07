@@ -13,7 +13,6 @@
 #   @claude-status-color-working  colour for the working state          (default: #dbbc7f)
 #   @claude-status-color-blocked  colour for the blocked state          (default: #ffaa00)
 #   @claude-status-color-done     colour for done and idle              (default: #00cc66)
-#   @claude-status-option         window option that holds the state   (default: @claude-state)
 set -euo pipefail
 
 CURRENT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

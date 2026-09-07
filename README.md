@@ -93,7 +93,6 @@ Set before `run '~/.tmux/plugins/tpm/tpm'`.
 | `@claude-status-color-working` | `#dbbc7f` | |
 | `@claude-status-color-blocked` | `#ffaa00` | |
 | `@claude-status-color-done` | `#00cc66` | used for `done` and `idle` |
-| `@claude-status-option` | `@claude-state` | window option holding the state; change only if it collides with something else |
 
 Colours are anything tmux accepts (`colour214`, `red`, `#rrggbb`). tmux maps
 hex to the nearest 256-colour when the terminal lacks true colour.

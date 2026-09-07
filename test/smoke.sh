@@ -63,7 +63,7 @@ pane() { t display-message -t "$1" -p '#{pane_id}'; }
 state() { TMUX_PANE="$(pane "$1")" "$BASH_BIN" "$ROOT/bin/claude-tmux-state" "$2"; }
 ack() { "$BASH_BIN" "$ROOT/bin/claude-tmux-ack" "$(pane "$1")"; }
 summary() { "$BASH_BIN" "$ROOT/bin/claude-tmux-summary"; }
-opt() { t show-option -w -t "$(pane "$1")" -qv "${2:-@claude-state}"; }
+opt() { t show-option -w -t "$(pane "$1")" -qv @claude-state; }
 
 # --- plugin load -------------------------------------------------------------
 "$BASH_BIN" "$ROOT/claude-status.tmux"
@@ -119,9 +119,7 @@ assert_eq "$(summary)" "" "no stateful windows → empty output"
 
 # --- options -----------------------------------------------------------------
 t set-option -g @claude-status-color-working '#ff0000'
-t set-option -g @claude-status-option '@agent'
 state work:main working
-assert_eq "$(opt work:main @agent)" working "custom option name honoured"
 assert_contains "$(summary)" '#[fg=#ff0000]work#[default]' "custom colour honoured"
 
 # --- guards ------------------------------------------------------------------
