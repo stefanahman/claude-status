@@ -28,7 +28,8 @@
 # client and may ack a finish you didn't see).
 #
 # Prints nothing: SessionStart hook output would be fed to Claude as
-# context. No-op outside tmux.
+# context. No-op outside tmux, and when TMUX and TMUX_PANE were
+# inherited from a pane this process doesn't run in.
 set -euo pipefail
 
 state="${1-}"
@@ -43,6 +44,24 @@ esac
 
 [[ -n "${TMUX:-}" ]] || exit 0
 [[ -n "${TMUX_PANE:-}" ]] || exit 0
+
+# The variables travel: an app launched from a shell inside tmux hands
+# them to every terminal it opens, and a Claude there would write the
+# state of a pane that is gone, or somebody else's. Ours is the pane
+# whose process is an ancestor of this one.
+inside_pane() {
+    local pane_pid p
+    pane_pid=$(tmux display-message -t "$TMUX_PANE" -p '#{pane_pid}' 2>/dev/null) || return 1
+    [[ -n "$pane_pid" ]] || return 1
+    p=$$
+    while [[ "$p" -gt 1 ]]; do
+        [[ "$p" == "$pane_pid" ]] && return 0
+        p=$(ps -o ppid= -p "$p" 2>/dev/null | tr -d ' ')
+        [[ -n "$p" ]] || return 1
+    done
+    return 1
+}
+inside_pane || exit 0
 
 if [[ "$state" == "clear" ]]; then
     # Unset rather than "": the window then carries no option at all.
