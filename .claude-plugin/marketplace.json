@@ -6,14 +6,14 @@
   },
   "metadata": {
     "description": "Claude Code hooks for tmux-claude-status",
-    "version": "0.1.0"
+    "version": "0.1.1"
   },
   "plugins": [
     {
       "name": "claude-status",
       "source": "./",
       "description": "Show whether Claude Code is working, blocked, or done in your tmux status bar",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "license": "MIT",
       "keywords": ["tmux", "status-bar", "hooks"]
     }
