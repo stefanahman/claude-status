@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# tmux-claude-status — TPM entry point.
+# claude-status — TPM entry point (the tmux half).
 #
 # Wires three things into the running tmux server:
 #   1. prefix + a (configurable)  → acknowledge the current window (done → idle)
