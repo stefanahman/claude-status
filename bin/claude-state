@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Write the Claude Code state of the current tmux window.
 #
-# Usage: claude-tmux-state working|blocked|done|idle|clear
+# Usage: claude-state working|blocked|done|idle|clear
 #
 # Called from Claude Code hooks (hooks/hooks.json):
 #   SessionStart (startup, resume, clear, fork)   → idle
@@ -37,7 +37,7 @@ case "$state" in
     working|blocked|done|idle) ;;
     clear) ;;
     *)
-        echo "usage: claude-tmux-state working|blocked|done|idle|clear" >&2
+        echo "usage: claude-state working|blocked|done|idle|clear" >&2
         exit 64
         ;;
 esac

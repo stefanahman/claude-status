@@ -6,7 +6,7 @@
 #   test/smoke.sh                       # scripts run under `bash` from PATH
 #   BASH_BIN=/bin/bash test/smoke.sh    # macOS: prove they run on stock bash 3.2
 #
-# Not covered: the auto-ack branch in claude-tmux-state (needs an attached,
+# Not covered: the auto-ack branch in claude-state (needs an attached,
 # focused client, i.e. a tty) and the Claude side (hooks/hooks.json), which
 # `claude plugin validate .` checks structurally.
 set -euo pipefail
@@ -68,7 +68,7 @@ pane() { t display-message -t "$1" -p '#{pane_id}'; }
 # state runs the hook inside the pane, as Claude would, and waits for it.
 state() {
     local mark="$SCRATCH/state.$RANDOM$RANDOM"
-    t send-keys -t "$(pane "$1")" "$BASH_BIN '$ROOT/bin/claude-tmux-state' $2; touch '$mark'" Enter
+    t send-keys -t "$(pane "$1")" "$BASH_BIN '$ROOT/bin/claude-state' $2; touch '$mark'" Enter
     for _ in $(seq 1 200); do
         [[ -e "$mark" ]] && return 0
         sleep 0.05
@@ -139,23 +139,23 @@ assert_contains "$(summary)" '#[fg=#ff0000]work#[default]' "custom colour honour
 
 # --- guards ------------------------------------------------------------------
 # The usage check comes before the pane guards, so it answers from here.
-if TMUX_PANE="$(pane work:main)" "$BASH_BIN" "$ROOT/bin/claude-tmux-state" green 2>/dev/null; then
+if TMUX_PANE="$(pane work:main)" "$BASH_BIN" "$ROOT/bin/claude-state" green 2>/dev/null; then
     fail "unknown state accepted"
 fi
 ok "unknown state rejected"
 
 (
     unset TMUX TMUX_PANE
-    "$BASH_BIN" "$ROOT/bin/claude-tmux-state" working
+    "$BASH_BIN" "$ROOT/bin/claude-state" working
 ) || fail "must be a no-op outside tmux"
 ok "no-op outside tmux"
 
 # Inherited variables: this process is not under the pane they name.
-TMUX_PANE="$(pane work:main)" "$BASH_BIN" "$ROOT/bin/claude-tmux-state" blocked || fail "must be a no-op outside the pane"
+TMUX_PANE="$(pane work:main)" "$BASH_BIN" "$ROOT/bin/claude-state" blocked || fail "must be a no-op outside the pane"
 assert_eq "$(opt work:main)" working "a pane this process is not in is left alone"
-TMUX_PANE="$(pane work:main)" "$BASH_BIN" "$ROOT/bin/claude-tmux-state" clear || fail "clear must be a no-op outside the pane"
+TMUX_PANE="$(pane work:main)" "$BASH_BIN" "$ROOT/bin/claude-state" clear || fail "clear must be a no-op outside the pane"
 assert_eq "$(opt work:main)" working "clear from outside the pane is ignored too"
-TMUX_PANE=%9999 "$BASH_BIN" "$ROOT/bin/claude-tmux-state" working || fail "a pane that is gone must be a no-op"
+TMUX_PANE=%9999 "$BASH_BIN" "$ROOT/bin/claude-state" working || fail "a pane that is gone must be a no-op"
 ok "no-op when the pane is gone"
 
 printf '\n%d checks passed\n' "$passed"

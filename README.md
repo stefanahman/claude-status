@@ -119,7 +119,7 @@ renders `pr(1⚠ 2~ 1* 3)`: 1 blocked, 2 working, 1 done-unread, 3 idle.
 | `Stop`, `StopFailure` | `done` |
 | `SessionEnd` | *(unset)* |
 
-Each hook runs `bin/claude-tmux-state <state>`, which writes the window
+Each hook runs `bin/claude-state <state>`, which writes the window
 option of `$TMUX_PANE`. `claude-status.tmux` binds the ack key, appends
 `pane-focus-in` / `client-focus-in` hooks that run `bin/claude-tmux-ack`, turns
 on `focus-events`, and replaces `#{claude_status}` with
@@ -138,16 +138,16 @@ If you'd rather not use the plugin system, the same hooks go into
 ```json
 {
   "hooks": {
-    "SessionStart":      [{ "matcher": "startup|resume|clear|fork", "hooks": [{ "type": "command", "command": "~/.tmux/plugins/tmux-claude-status/bin/claude-tmux-state idle" }] }],
-    "UserPromptSubmit":  [{ "hooks": [{ "type": "command", "command": "~/.tmux/plugins/tmux-claude-status/bin/claude-tmux-state working" }] }],
-    "PostToolUse":       [{ "hooks": [{ "type": "command", "command": "~/.tmux/plugins/tmux-claude-status/bin/claude-tmux-state working" }] }],
-    "PreToolUse":        [{ "matcher": "AskUserQuestion|ExitPlanMode", "hooks": [{ "type": "command", "command": "~/.tmux/plugins/tmux-claude-status/bin/claude-tmux-state blocked" }] }],
-    "PermissionRequest": [{ "hooks": [{ "type": "command", "command": "~/.tmux/plugins/tmux-claude-status/bin/claude-tmux-state blocked" }] }],
-    "Elicitation":       [{ "hooks": [{ "type": "command", "command": "~/.tmux/plugins/tmux-claude-status/bin/claude-tmux-state blocked" }] }],
-    "Notification":      [{ "matcher": "permission_prompt|agent_needs_input|elicitation_dialog", "hooks": [{ "type": "command", "command": "~/.tmux/plugins/tmux-claude-status/bin/claude-tmux-state blocked" }] }],
-    "Stop":              [{ "hooks": [{ "type": "command", "command": "~/.tmux/plugins/tmux-claude-status/bin/claude-tmux-state done" }] }],
-    "StopFailure":       [{ "hooks": [{ "type": "command", "command": "~/.tmux/plugins/tmux-claude-status/bin/claude-tmux-state done" }] }],
-    "SessionEnd":        [{ "hooks": [{ "type": "command", "command": "~/.tmux/plugins/tmux-claude-status/bin/claude-tmux-state clear" }] }]
+    "SessionStart":      [{ "matcher": "startup|resume|clear|fork", "hooks": [{ "type": "command", "command": "~/.tmux/plugins/tmux-claude-status/bin/claude-state idle" }] }],
+    "UserPromptSubmit":  [{ "hooks": [{ "type": "command", "command": "~/.tmux/plugins/tmux-claude-status/bin/claude-state working" }] }],
+    "PostToolUse":       [{ "hooks": [{ "type": "command", "command": "~/.tmux/plugins/tmux-claude-status/bin/claude-state working" }] }],
+    "PreToolUse":        [{ "matcher": "AskUserQuestion|ExitPlanMode", "hooks": [{ "type": "command", "command": "~/.tmux/plugins/tmux-claude-status/bin/claude-state blocked" }] }],
+    "PermissionRequest": [{ "hooks": [{ "type": "command", "command": "~/.tmux/plugins/tmux-claude-status/bin/claude-state blocked" }] }],
+    "Elicitation":       [{ "hooks": [{ "type": "command", "command": "~/.tmux/plugins/tmux-claude-status/bin/claude-state blocked" }] }],
+    "Notification":      [{ "matcher": "permission_prompt|agent_needs_input|elicitation_dialog", "hooks": [{ "type": "command", "command": "~/.tmux/plugins/tmux-claude-status/bin/claude-state blocked" }] }],
+    "Stop":              [{ "hooks": [{ "type": "command", "command": "~/.tmux/plugins/tmux-claude-status/bin/claude-state done" }] }],
+    "StopFailure":       [{ "hooks": [{ "type": "command", "command": "~/.tmux/plugins/tmux-claude-status/bin/claude-state done" }] }],
+    "SessionEnd":        [{ "hooks": [{ "type": "command", "command": "~/.tmux/plugins/tmux-claude-status/bin/claude-state clear" }] }]
   }
 }
 ```
@@ -181,7 +181,7 @@ session aggregation, and shipping the hook half as an installable plugin.
 solve the same problem by replacing the terminal / multiplexer, with richer
 UIs. This plugin is for people who stay in tmux. The state words match
 herdr's, so a bridge (`herdr pane report-agent`, `cmux set-status`) is a
-few lines in `bin/claude-tmux-state` — not built yet.
+few lines in `bin/claude-state` — not built yet.
 
 ## Hacking
 
