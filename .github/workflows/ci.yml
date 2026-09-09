@@ -14,3 +14,16 @@ jobs:
       - run: shellcheck claude-status.tmux bin/* test/smoke.sh
       - run: test/smoke.sh
       - run: test -x claude-status.tmux && for f in bin/*; do test -x "$f"; done
+
+  # The Claude half of the plugin is two manifests and hooks/hooks.json;
+  # a broken one disables the hooks for everyone on the marketplace, and
+  # nothing else here reads them.
+  plugin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: npm install -g @anthropic-ai/claude-code@2.1.263 # the release the plugin was validated with
+      - run: claude plugin validate . --strict
