@@ -1,5 +1,5 @@
 {
-  "description": "Writes Claude's state (idle / working / blocked / done) to the tmux window option that tmux-claude-status renders in the status bar. No-op outside tmux.",
+  "description": "Writes Claude's state (idle / working / blocked / done) to the tmux window option that claude-status renders in the status bar, or to the cmux workspace pill the sidebar shows. No-op outside both.",
   "hooks": {
     "SessionStart": [
       {
