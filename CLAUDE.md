@@ -58,6 +58,11 @@ a real tmux, the executable bits) and `plugin` (`claude plugin validate
 version, which must read the same in all three places; on a pinned
 `@anthropic-ai/claude-code` that has to be bumped now and then).
 
+`plugin tag` refuses on a dirty tree, so it runs after a commit, not
+before. It also warns that this repo's CLAUDE.md sits at the plugin
+root and is not shipped as plugin context — correct and intended: the
+file is the guide for working here, not something the plugin carries.
+
 The tmux half loads from `~/.config/tmux/plugins/claude-status`, a
 symlink to this checkout on Stefan's machine (TPM treats an existing
 directory as installed): run `claude-status.tmux` from that path to
