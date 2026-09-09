@@ -9,7 +9,8 @@
 # Options (set before `run '~/.tmux/plugins/tpm/tpm'`):
 #   @claude-status-ack-key        key bound after prefix                (default: a)
 #   @claude-status-aggregate      "<session>:<label>" — windows of <session>
-#                                 collapse into one "<label>(…)" chip   (default: none)
+#                                 collapse into one "<label>(…)" chip; several
+#                                 pairs, space-separated  (default: none)
 #   @claude-status-color-working  colour for the working state          (default: #dbbc7f)
 #   @claude-status-color-blocked  colour for the blocked state          (default: #ffaa00)
 #   @claude-status-color-done     colour for done and idle              (default: #00cc66)

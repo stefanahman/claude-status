@@ -240,6 +240,39 @@ assert_eq "$(last_call)" 'quiet=1 set-status claude blocked --workspace WS-6 --i
 assert_eq "$(calls)" "$((n + 1))" "both: one cmux call"
 state work:main working
 
+# --- aggregate: several pairs ------------------------------------------------
+# owl keeps three such sessions; the option takes a pair for each.
+t new-session -d -s features -n ft-1
+t new-window -d -t features -n ft-2
+t new-session -d -s projects -n pj-1
+state features:ft-1 working
+state features:ft-2 blocked
+state projects:pj-1 idle
+# pr-reviews' windows were cleared above: a pair whose session has no
+# stateful window is named here on purpose.
+t set-option -g @claude-status-aggregate 'features:ft projects:pj pr-reviews:pr'
+out=$(summary)
+assert_contains "$out" 'ft(#[fg=#ffaa00]1⚠#[default] #[fg=#ff0000]1~#[default])' "several pairs: the first chip counts its own session"
+assert_contains "$out" 'pj(#[fg=#00cc66]1#[default])' "several pairs: the second chip counts its own"
+assert_not_contains "$out" 'pr(' "a pair whose session has no stateful window renders nothing"
+assert_not_contains "$out" '#[fg=#ff0000]features#[default]' "an aggregated session gets no chip of its own"
+before=${out%%pj(*}
+assert_contains "$before" 'ft(' "chips render in the order the pairs are written"
+
+t set-option -g @claude-status-aggregate 'features:ft'
+out=$(summary)
+assert_contains "$out" 'ft(#[fg=#ffaa00]1⚠#[default] #[fg=#ff0000]1~#[default])' "one pair still aggregates, unchanged"
+assert_contains "$out" '#[fg=#00cc66]projects#[default]' "a session outside the pairs keeps its own chip"
+
+t set-option -g @claude-status-aggregate ''
+out=$(summary)
+assert_not_contains "$out" 'ft(' "no option, no aggregate chip"
+assert_contains "$out" '#[fg=#ff0000]features#[default]' "the session gets its own chip back"
+
+state features:ft-1 clear
+state features:ft-2 clear
+state projects:pj-1 clear
+
 # --- guards ------------------------------------------------------------------
 # The usage check comes before the pane guards, so it answers from here.
 if TMUX_PANE="$(pane work:main)" "$BASH_BIN" "$ROOT/bin/claude-state" green 2>/dev/null; then
