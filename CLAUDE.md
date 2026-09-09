@@ -54,17 +54,26 @@ gh run list --workflow ci --branch main --limit 1   # until completed success
 
 CI (`.github/workflows/ci.yml`): `test` (shellcheck, the smoke suite on
 a real tmux, the executable bits) and `plugin` (`claude plugin validate
---strict`, on a pinned `@anthropic-ai/claude-code` that has to be
-bumped now and then).
+--strict` for the shape and `claude plugin tag --dry-run .` for the
+version, which must read the same in all three places; on a pinned
+`@anthropic-ai/claude-code` that has to be bumped now and then).
 
 The tmux half loads from `~/.config/tmux/plugins/claude-status`, a
 symlink to this checkout on Stefan's machine (TPM treats an existing
 directory as installed): run `claude-status.tmux` from that path to
 re-wire the running server (TPM does it on `prefix + I` and at server
-start; a plain `tmux source-file` leaves the old wiring in place). The Claude half is the marketplace clone
-at `~/.claude/plugins/marketplaces/claude-status`, which tracks main:
-`claude plugin marketplace update claude-status` after a push. Claude
-sessions started before that keep the hooks they started with.
+start; a plain `tmux source-file` leaves the old wiring in place).
+
+The Claude half takes two commands and a restart, and each does a
+different thing:
+
+```sh
+claude plugin marketplace update claude-status   # the catalogue: pulls the marketplace clone
+claude plugin update claude-status@claude-status # the installed copy, which is what a session loads
+```
+
+Neither alone is enough, and a session keeps the hooks it started with,
+so a restart is what makes a hook change take effect.
 
 ## Ship at a milestone
 
