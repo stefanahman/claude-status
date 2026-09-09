@@ -5,17 +5,22 @@
     "url": "https://github.com/stefanahman"
   },
   "metadata": {
-    "description": "Claude Code hooks for tmux-claude-status",
-    "version": "0.1.1"
+    "description": "Claude Code hooks for claude-status",
+    "version": "0.2.0"
   },
   "plugins": [
     {
       "name": "claude-status",
       "source": "./",
-      "description": "Show whether Claude Code is working, blocked, or done in your tmux status bar",
-      "version": "0.1.1",
+      "description": "Show whether Claude Code is working, blocked, or done — in your tmux status bar or cmux sidebar",
+      "version": "0.2.0",
       "license": "MIT",
-      "keywords": ["tmux", "status-bar", "hooks"]
+      "keywords": [
+        "tmux",
+        "cmux",
+        "status-bar",
+        "hooks"
+      ]
     }
   ]
 }
