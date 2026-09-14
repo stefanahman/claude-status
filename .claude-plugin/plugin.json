@@ -1,6 +1,6 @@
 {
   "name": "claude-status",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Show whether Claude Code is working, blocked, or done — in your tmux status bar",
   "author": {
     "name": "Stefan Åhman",
