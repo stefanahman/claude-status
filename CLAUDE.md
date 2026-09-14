@@ -1,18 +1,24 @@
 # claude-status — agent notes
 
 Two halves, one contract (README.md): Claude Code hooks (the
-`claude-status@claude-status` plugin) write the agent's state — a tmux
-window option under tmux, a sidebar pill under cmux — and the tmux half
-renders it. owl reads the state through mux; the pill's shape (key
-`claude`, values working/blocked/done/idle) is shared with mux's cmux
-driver, so a change to it changes mux too.
+`claude-status@claude-status` plugin) write the agent's state into a tmux
+window option, and the tmux half renders it. owl reads it through mux;
+the option's shape (`@claude-state`, values working/blocked/done/idle) is
+shared with mux's tmux driver, so a change to it changes mux too.
+
+Nothing is written under cmux. cmux derives the same four states from its
+own copy of these hooks and mux reads them from there, so a pill here was
+a second answer to an answered question. It existed while cmux folded
+Claude's idle reminder into "Needs input"; upstream fixed that. The smoke
+test asserts the silence — being inside a cmux terminal must produce no
+call — so restoring a pill means deleting a test that says not to.
 
 The parts, so a change starts in the right file:
 
 | file | what |
 |---|---|
 | `hooks/hooks.json` | which Claude Code event writes which state — the first file to open when the state is wrong |
-| `bin/claude-state` | writes it: the tmux window option, the cmux pill, or both |
+| `bin/claude-state` | writes it: the tmux window option, and nothing anywhere else |
 | `bin/claude-tmux-summary` | renders the status line, including the aggregate chips |
 | `bin/claude-tmux-ack` | done → idle, from the key and the focus hooks |
 | `claude-status.tmux` | the TPM entry: binds the key, installs the focus hooks, wires `#{claude_status}` |
@@ -34,7 +40,7 @@ claude plugin validate . --strict   # CI's plugin job runs this too
 Check exit codes, not output. The scripts must stay bash 3.2 and never
 print on a hook's stdout (SessionStart output is fed to Claude). The
 smoke test unsets CMUX_WORKSPACE_ID first; a shell inside cmux carries
-the real one. CI has a fourth step the local commands do not: every
+the real one, and the cmux checks set their own. CI has a fourth step the local commands do not: every
 file in `bin/` and `claude-status.tmux` must be executable, so a new
 script needs `chmod +x` before it is committed.
 

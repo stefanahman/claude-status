@@ -1,7 +1,7 @@
 {
   "name": "claude-status",
   "version": "0.3.0",
-  "description": "Show whether Claude Code is working, blocked, or done — in your tmux status bar or cmux sidebar",
+  "description": "Show whether Claude Code is working, blocked, or done — in your tmux status bar",
   "author": {
     "name": "Stefan Åhman",
     "url": "https://github.com/stefanahman"
@@ -11,7 +11,6 @@
   "license": "MIT",
   "keywords": [
     "tmux",
-    "cmux",
     "status-bar",
     "hooks"
   ]

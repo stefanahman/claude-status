@@ -143,101 +143,41 @@ t set-option -g @claude-status-color-working '#ff0000'
 state work:main working
 assert_contains "$(summary)" '#[fg=#ff0000]work#[default]' "custom colour honoured"
 
-# --- cmux --------------------------------------------------------------------
-# A fake cmux that logs its argv (with CMUX_QUIET) and talks on both
-# streams: the hook must discard what it says.
+# --- cmux: nothing is written ------------------------------------------------
+# cmux keeps its own agent state from the same Claude Code hooks and mux
+# reads that, so this plugin writes no pill: a second answer to an
+# answered question, and one that went stale the moment the terminal it
+# was written from went away. A fake on PATH proves the silence — being
+# inside a cmux terminal must not produce a call.
 FAKE_BIN="$SCRATCH/fake-bin"
 mkdir -p "$FAKE_BIN"
 CMUX_LOG="$SCRATCH/cmux.log"
 cat >"$FAKE_BIN/cmux" <<EOF
 #!/bin/sh
-printf 'quiet=%s %s\n' "\${CMUX_QUIET-}" "\$*" >>'$CMUX_LOG'
-echo "OK"
-echo "cmux: chatter" >&2
+printf '%s\n' "$*" >>'$CMUX_LOG'
 EOF
 chmod +x "$FAKE_BIN/cmux"
-last_call() { tail -n 1 "$CMUX_LOG" 2>/dev/null || true; }
-calls() { wc -l <"$CMUX_LOG" 2>/dev/null | tr -d ' ' || echo 0; }
-# pill runs the hook outside tmux with the fake named as cmux's own CLI.
-pill() {
-    (
+
+for s in working blocked "done" idle clear; do
+    out=$(
         unset TMUX TMUX_PANE
-        CMUX_WORKSPACE_ID=WS-1 CMUX_CLAUDE_HOOK_CMUX_BIN="$FAKE_BIN/cmux" "$BASH_BIN" "$ROOT/bin/claude-state" "$1"
-    )
-}
+        PATH="$FAKE_BIN:$PATH" CMUX_WORKSPACE_ID=WS-1 CMUX_CLAUDE_HOOK_CMUX_BIN="$FAKE_BIN/cmux" \
+            "$BASH_BIN" "$ROOT/bin/claude-state" "$s" 2>&1
+    ) || fail "the hook must not fail inside a cmux terminal"
+    assert_eq "$out" "" "cmux: $s prints nothing"
+done
+assert_eq "$([[ -e "$CMUX_LOG" ]] && wc -l <"$CMUX_LOG" | tr -d ' ' || echo 0)" "0" "cmux: no call is made"
 
-out=$(pill working 2>&1)
-assert_eq "$out" "" "pill: the hook prints nothing"
-assert_eq "$(last_call)" 'quiet=1 set-status claude working --workspace WS-1 --icon bolt.fill --color #dbbc7f --priority 90' "pill: working"
-pill blocked
-assert_eq "$(last_call)" 'quiet=1 set-status claude blocked --workspace WS-1 --icon hand.raised.fill --color #ffaa00 --priority 90' "pill: blocked"
-pill "done"
-assert_eq "$(last_call)" 'quiet=1 set-status claude done --workspace WS-1 --icon checkmark.circle.fill --color #00cc66 --priority 90' "pill: done stays done (no auto-ack under cmux)"
-pill idle
-assert_eq "$(last_call)" 'quiet=1 set-status claude idle --workspace WS-1 --icon circle --color #00cc66 --priority 90' "pill: idle"
-pill clear
-assert_eq "$(last_call)" 'quiet=1 clear-status claude --workspace WS-1' "pill: clear removes it"
-
-# cmux on PATH, no CMUX_CLAUDE_HOOK_CMUX_BIN: found by name.
-n=$(calls)
-(
-    unset TMUX TMUX_PANE
-    PATH="$FAKE_BIN:$PATH" CMUX_WORKSPACE_ID=WS-2 "$BASH_BIN" "$ROOT/bin/claude-state" working
-)
-assert_eq "$(last_call)" 'quiet=1 set-status claude working --workspace WS-2 --icon bolt.fill --color #dbbc7f --priority 90' "pill: cmux found on PATH"
-assert_eq "$(calls)" "$((n + 1))" "pill: one call per state"
-
-# CMUX_CLAUDE_HOOK_CMUX_BIN wins over PATH.
-ALT_BIN="$SCRATCH/alt-bin"
-mkdir -p "$ALT_BIN"
-ALT_LOG="$SCRATCH/alt.log"
-printf '#!/bin/sh\nprintf "%%s\\n" "$*" >>%s\n' "'$ALT_LOG'" >"$ALT_BIN/cmux-alt"
-chmod +x "$ALT_BIN/cmux-alt"
-n=$(calls)
-(
-    unset TMUX TMUX_PANE
-    PATH="$FAKE_BIN:$PATH" CMUX_WORKSPACE_ID=WS-3 CMUX_CLAUDE_HOOK_CMUX_BIN="$ALT_BIN/cmux-alt" "$BASH_BIN" "$ROOT/bin/claude-state" idle
-)
-assert_eq "$(tail -n 1 "$ALT_LOG")" 'set-status claude idle --workspace WS-3 --icon circle --color #00cc66 --priority 90' "pill: CMUX_CLAUDE_HOOK_CMUX_BIN names the CLI"
-assert_eq "$(calls)" "$n" "pill: the PATH one is left alone then"
-
-# No workspace, no call; no CLI, no failure.
-n=$(calls)
-(
-    unset TMUX TMUX_PANE CMUX_WORKSPACE_ID
-    PATH="$FAKE_BIN:$PATH" "$BASH_BIN" "$ROOT/bin/claude-state" working
-) || fail "must be a no-op without CMUX_WORKSPACE_ID"
-assert_eq "$(calls)" "$n" "pill: no call without CMUX_WORKSPACE_ID"
-out=$(
-    unset TMUX TMUX_PANE
-    PATH="$SCRATCH/nowhere:/usr/bin:/bin" CMUX_WORKSPACE_ID=WS-4 CMUX_CLAUDE_HOOK_CMUX_BIN="$SCRATCH/nowhere/cmux" "$BASH_BIN" "$ROOT/bin/claude-state" working 2>&1
-) || fail "must be a no-op when the CLI is missing"
-assert_eq "$out" "" "pill: silent when the CLI is missing"
-
-# A failing cmux is swallowed: exit 0, nothing printed.
-BAD_BIN="$SCRATCH/bad-bin"
-mkdir -p "$BAD_BIN"
-printf '#!/bin/sh\necho "cmux: no such workspace" >&2\nexit 1\n' >"$BAD_BIN/cmux"
-chmod +x "$BAD_BIN/cmux"
-out=$(
-    unset TMUX TMUX_PANE
-    CMUX_WORKSPACE_ID=WS-5 CMUX_CLAUDE_HOOK_CMUX_BIN="$BAD_BIN/cmux" "$BASH_BIN" "$ROOT/bin/claude-state" working 2>&1
-) || fail "a failing cmux must not fail the hook"
-assert_eq "$out" "" "pill: a failing cmux is silent"
-
-# Both at once: a tmux server inside a cmux terminal gets the window
-# option and the pill.
-n=$(calls)
+# A tmux server inside a cmux terminal still gets its window option.
 mark="$SCRATCH/both.$RANDOM"
-t send-keys -t "$(pane work:main)" "CMUX_WORKSPACE_ID=WS-6 CMUX_CLAUDE_HOOK_CMUX_BIN='$FAKE_BIN/cmux' $BASH_BIN '$ROOT/bin/claude-state' blocked; touch '$mark'" Enter
+t send-keys -t "$(pane work:main)" "CMUX_WORKSPACE_ID=WS-6 PATH='$FAKE_BIN:$PATH' $BASH_BIN '$ROOT/bin/claude-state' blocked; touch '$mark'" Enter
 for _ in $(seq 1 200); do
     [[ -e "$mark" ]] && break
     sleep 0.05
 done
-[[ -e "$mark" ]] || fail "the both-at-once hook never ran"
-assert_eq "$(opt work:main)" blocked "both: the tmux window option is written"
-assert_eq "$(last_call)" 'quiet=1 set-status claude blocked --workspace WS-6 --icon hand.raised.fill --color #ffaa00 --priority 90' "both: the pill is written too"
-assert_eq "$(calls)" "$((n + 1))" "both: one cmux call"
+[[ -e "$mark" ]] || fail "the hook inside cmux never ran"
+assert_eq "$(opt work:main)" blocked "inside cmux: the tmux window option is still written"
+assert_eq "$([[ -e "$CMUX_LOG" ]] && wc -l <"$CMUX_LOG" | tr -d ' ' || echo 0)" "0" "inside cmux: still no cmux call"
 state work:main working
 
 # --- aggregate: several pairs ------------------------------------------------

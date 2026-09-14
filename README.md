@@ -2,8 +2,7 @@
 
 See whether [Claude Code](https://docs.claude.com/en/docs/claude-code) is
 **working**, **blocked** on you, or **done** — for every tmux window, in the
-status bar you already have; for every [cmux](https://github.com/manaflow-ai/cmux)
-workspace, as a pill in its sidebar.
+status bar you already have.
 
 ```
 [work]  1:claude  2:vim  3:shell            work*  eden  pr(1⚠ 2~ 1)   Thu 17:46
@@ -12,20 +11,19 @@ workspace, as a pill in its sidebar.
                                             unread       session of agents
 ```
 
-Claude Code hooks write the state where the session runs: into a tmux
-window option, which a tiny renderer turns into coloured chips, one per
-window; or onto the cmux workspace, as a status pill next to cmux's own.
-Looking at a finished tmux window (focusing the pane, or the terminal
-itself) acknowledges it. Nothing polls Claude, nothing scrapes the screen,
-and it works the same over SSH.
+Claude Code hooks write the state where the session runs — a tmux window
+option, which a tiny renderer turns into coloured chips, one per window.
+Looking at a finished window (focusing the pane, or the terminal itself)
+acknowledges it. Nothing polls Claude, nothing scrapes the screen, and it
+works the same over SSH.
 
 Was `tmux-claude-status`; GitHub redirects the old name, and the Claude
 Code plugin was always `claude-status@claude-status`.
 
 ## Install
 
-The hooks are a Claude Code plugin — that half is all cmux needs. tmux
-adds a plugin of its own for the chips. One contract between them.
+Two halves: the hooks are a Claude Code plugin, and tmux adds a plugin of
+its own for the chips. One contract between them.
 
 ### 1. Claude Code (plugin)
 
@@ -47,7 +45,7 @@ Or in `~/.claude/settings.json`:
 
 The plugin ships only hooks (`hooks/hooks.json`) — no skills, no commands, no
 permissions — for the events Claude Code 2.1.263 emits (the table under *How
-it works*; tested with that release). Outside tmux and cmux they exit
+it works*; tested with that release). Outside tmux they exit
 immediately.
 
 ### 2. tmux (TPM)
@@ -65,12 +63,13 @@ Press `prefix + I` to fetch it. Load it *after* any theme that rewrites
 
 Without TPM: clone the repo and `run-shell /path/to/claude-status/claude-status.tmux`.
 
-### 3. cmux
+### 3. cmux — nothing to do
 
-Nothing to install: cmux puts its CLI and the workspace id in the
-environment of every terminal it runs, and the hooks use them. The pill
-sits in the sidebar with cmux's own (custom pills are on by default,
-`sidebar.showCustomMetadata`).
+cmux keeps its own agent state from the same Claude Code hooks and shows
+it in its sidebar, so this plugin writes nothing there. It used to set a
+second pill, back when cmux folded Claude's idle reminder into "Needs
+input" and a waiting agent read as one that wanted you; upstream fixed
+that, and two answers to one question is worse than one.
 
 ## States
 
@@ -82,10 +81,9 @@ sits in the sidebar with cmux's own (custom pills are on by default,
 | `idle` | green | waiting for your next prompt: just started, or finished and seen | hooks (session start), ack (`prefix + a`, or focusing the window; tmux only) |
 | *(unset)* | — | no Claude here / session ended | hooks |
 
-If you're looking at the tmux pane when Claude finishes — pane and window
+If you're looking at the pane when Claude finishes — pane and window
 active, and the terminal has focus — it goes straight to `idle`: no stale
-`*`. Under cmux `done` stays until the next prompt; a reader that wants
-"seen" pairs it with cmux's unread notification for the workspace.
+`*`.
 
 ### The contract (for other tools)
 
@@ -97,21 +95,15 @@ tmux: the window option `@claude-state`. Read it however you like:
 tmux list-windows -a -F '#{session_name}:#{window_name} #{@claude-state}'
 ```
 
-cmux: the workspace's status pill under the key `claude`:
+That option is the whole contract. Nothing is written under cmux: it
+derives the same four states from its own copy of the hooks, and
+[mux](https://github.com/stefanahman/mux) reads them from there —
+`running`, `needsInput`, and `idle` paired with the workspace's unread
+notification to tell `done` from `idle`.
 
-```sh
-cmux list-status --workspace <id>      # claude=blocked icon=hand.raised.fill color=#ffaa00 priority=90
-```
-
-cmux's own pill, `claude_code`, is its hook lifecycle rendered, and that
-lifecycle folds Claude's idle reminder — the notification sent a minute
-after every turn — into "Needs input". This pill carries the hook events
-as they are, so `blocked` means a permission, a question or a plan review.
-
-[owl](https://github.com/stefanahman/owl) reads both, through
-[mux](https://github.com/stefanahman/mux), to badge pull requests and
-issues with the state of their agent, and to refuse typing into one that
-is blocked.
+[owl](https://github.com/stefanahman/owl) reads the state through mux, to
+badge pull requests and issues with the state of their agent, and to
+refuse typing into one that is blocked.
 
 ## Options
 
@@ -161,12 +153,11 @@ renders nothing at all.
 | `Stop`, `StopFailure` | `done` |
 | `SessionEnd` | *(unset)* |
 
-Each hook runs `bin/claude-state <state>`. Under cmux (`CMUX_WORKSPACE_ID`
-set) it sets the workspace's `claude` pill through the CLI cmux names in
-`CMUX_CLAUDE_HOOK_CMUX_BIN`, and clears it on `SessionEnd`; a cmux that
-fails is ignored. Under tmux (`TMUX` and `TMUX_PANE`) it writes the window
-option of `$TMUX_PANE`; a tmux server started inside a cmux terminal gets
-both. `claude-status.tmux` binds the ack key, appends `pane-focus-in` /
+Each hook runs `bin/claude-state <state>`, which writes the window option
+of `$TMUX_PANE` when `TMUX` and `TMUX_PANE` are set, and does nothing
+otherwise — including inside a cmux terminal, which keeps its own state.
+A tmux server started inside one still gets its option.
+`claude-status.tmux` binds the ack key, appends `pane-focus-in` /
 `client-focus-in` hooks that run `bin/claude-tmux-ack`, turns on
 `focus-events`, and replaces `#{claude_status}` with
 `#(bin/claude-tmux-summary)`.
@@ -200,9 +191,8 @@ If you'd rather not use the plugin system, the same hooks go into
 
 ## Limitations
 
-- One state per tmux window, one per cmux workspace. Two Claude sessions
-  in split panes of the same window, or in two surfaces of the same
-  workspace, overwrite each other; put them in separate windows or
+- One state per tmux window. Two Claude sessions in split panes of the
+  same window overwrite each other; put them in separate windows or
   workspaces.
 - "Already looking at it" reads the terminal's focus from tmux ≥ 3.3
   (`client_flags`). On older servers it means *attached, pane active, window
@@ -227,16 +217,15 @@ session aggregation, and shipping the hook half as an installable plugin.
 
 [cmux](https://github.com/manaflow-ai/cmux) and [herdr](https://github.com/herdrdev/herdr)
 solve the same problem by replacing the terminal / multiplexer, with richer
-UIs, and each detects the state itself. cmux is bridged here because its
-own detection reads the idle reminder as needing input; the pill is the
-precise state beside it. herdr's words match these, so a bridge
+UIs, and each detects the state itself — cmux from these same hooks, which
+is why nothing is written there. herdr's words match these, so a bridge
 (`herdr pane report-agent`) is a few lines in `bin/claude-state` — not
 built yet.
 
 ## Hacking
 
 ```sh
-test/smoke.sh                       # throwaway tmux server + a fake cmux, 42 checks
+test/smoke.sh                       # throwaway tmux server + a fake cmux, 43 checks
 BASH_BIN=/bin/bash test/smoke.sh    # macOS: prove it on bash 3.2
 shellcheck claude-status.tmux bin/* test/smoke.sh
 claude plugin validate .
@@ -246,8 +235,7 @@ claude --plugin-dir . -p 'Reply with ok'   # inside tmux: watch the window optio
 Developing against a checkout: `ln -sfn "$PWD" ~/.tmux/plugins/claude-status`
 (`~/.config/tmux/plugins/` when your tmux.conf lives under `~/.config/tmux` —
 TPM installs next to the config; it treats an existing directory as installed)
-and `claude --plugin-dir /path/to/claude-status`. Under cmux, the pill of
-the workspace you run that in is yours to watch: `cmux list-status`.
+and `claude --plugin-dir /path/to/claude-status`.
 
 ## License
 
