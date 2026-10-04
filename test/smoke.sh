@@ -89,7 +89,10 @@ opt() { t show-option -w -t "$(pane "$1")" -qv @claude-state; }
 "$BASH_BIN" "$ROOT/claude-status.tmux"
 assert_contains "$(t show-option -gv status-right)" "L #($ROOT/bin/claude-tmux-summary) R" "status-right interpolated"
 assert_eq "$(t show-option -gv focus-events)" "on" "focus-events enabled"
-assert_contains "$(t list-keys -T prefix a)" "claude-tmux-ack" "prefix + a bound"
+# tmux 3.7 prints nothing for `list-keys -T prefix a` whatever is bound, so
+# read the table whole and take key a's line.
+ack_line=$(t list-keys -T prefix | awk '$3 == "prefix" && $4 == "a"')
+assert_contains "$ack_line" "claude-tmux-ack" "prefix + a bound"
 hooks() { t show-hooks -g "$1" 2>/dev/null | grep -c claude-tmux-ack || true; }
 # client-focus-in needs tmux ≥ 3.3; older servers get the pane hook only.
 if t show-hooks -g client-focus-in >/dev/null 2>&1; then want="1/1"; else want="1/0"; fi
