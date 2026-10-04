@@ -22,7 +22,7 @@ The parts, so a change starts in the right file:
 | `bin/claude-tmux-summary` | renders the status line, including the aggregate chips |
 | `bin/claude-tmux-ack` | done → idle, from the key and the focus hooks |
 | `claude-status.tmux` | the TPM entry: binds the key, installs the focus hooks, wires `#{claude_status}` |
-| `README.md`, "The contract (for other tools)" | the window option and the pill as other tools read them — mux depends on this section, so change it and mux with it |
+| `docs/states.md`, "The contract (for other tools)" | the window option and the pill as other tools read them — mux depends on this section, so change it and mux with it |
 
 A change is done when it is committed in coherent pieces, pushed with
 CI green, live on this machine, documented, and — at a milestone —
